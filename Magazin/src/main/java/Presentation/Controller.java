@@ -2,36 +2,48 @@ package Presentation;
 
 import BusinessLogic.ClientBLL;
 import BusinessLogic.ProductBLL;
+import BusinessLogic.OrderBLL;
 import Model.Client;
+import Model.Order;
 import Model.Product;
 
 import javax.swing.*;
 import java.awt.event.*;
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+
+import static javax.swing.JOptionPane.showConfirmDialog;
 
 public class Controller {
     private final View view;
     private final ProductBLL productBll;
     private final ClientBLL clientBll;
+    private final OrderBLL orderBll;
     private int logged = 0;
 
     public Controller(View view){
         this.view = view;
         this.productBll = new ProductBLL();
         this.clientBll = new ClientBLL();
+        this.orderBll = new OrderBLL();
 
         view.addAccBtnListener(new AccBtnListener());
         view.addSearchListener(new SearchListener());
+        view.addBuyBtnListener(new BuyBtnListener());
         view.addLogoBtnListener(new LogoBtnListener());
         view.addCartBtnListener(new CartBtnListener());
         view.addSellBtnListener(new SellBtnListener());
         view.addCategoryListener(new CategoryListener());
         view.addLoginBtnListener(new LoginBtnListener());
+        view.addAdminBtnListener(new AdminBtnListener());
         view.addSignUpBtnListener(new SignBtnListener());
         view.addSearchBtnListener(new SearchBtnListener());
         view.addLogoffBtnListener(new LogoffBtnListener());
         view.addSellLabelListener(new SellLabelListener());
-        view.addBuyBtnListener(new BuyBtnListener());
+        view.addSelectBtnListener(new SelectBtnListener());
+        view.addDeleteClientListener(new DeleteClientBtnListener());
+        view.addDeleteProductListener(new DeleteProductBtnListener());
     }
 
     class SearchListener implements ActionListener {
@@ -49,6 +61,13 @@ public class Controller {
             List<Product> productsList;
             productsList = productBll.findAllProducts();
             view.createProductsPanel(view.getContentPanel(), productsList);
+        }
+    }
+
+    class AdminBtnListener extends MouseAdapter {
+        @Override
+        public void mouseClicked(MouseEvent e) {
+            view.createAdminPanel(view.getContentPanel());
         }
     }
 
@@ -90,11 +109,23 @@ public class Controller {
             }
         }
     }
+
     class BuyBtnListener implements ActionListener{
         public void actionPerformed(ActionEvent e){
             if(logged != 0){
                 Client c = clientBll.findClientById(logged);
                 view.showBillInfo(c);
+                HashMap<Integer, Integer> cart = view.getCartList();
+                for (int id : cart.keySet()) {
+                    Product pr = productBll.findProductById(id);
+                    Order ord = new Order(orderBll.findOrderLastId() + 1, c.getId(), id,
+                            cart.get(id), (float)cart.get(id) * pr.getPrice());
+                    try {
+                        orderBll.insertOrder(ord);
+                    } catch (Exception ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
             }else{
                 view.showMessageError("Nu sunteti conectat!");
             }
@@ -116,6 +147,8 @@ public class Controller {
                         throw new Exception("Parola incorecta");
                     } else{
                         logged = c.getId();
+                        if (logged == 1)
+                            view.setAdminLabelVisible(true);
                         List<Product> productsList;
                         productsList = productBll.findAllProducts();
                         view.createProductsPanel(view.getContentPanel(), productsList);
@@ -131,6 +164,7 @@ public class Controller {
     class LogoffBtnListener implements ActionListener {
         public void actionPerformed(ActionEvent e) {
             logged = 0;
+            view.setAdminLabelVisible(false);
             view.createLoginPanel(view.getContentPanel());
         }
     }
@@ -183,14 +217,15 @@ public class Controller {
                 String price = view.getPriceInput();
                 String quantity = view.getQuantityInput();
                 String stock = view.getStockInput();
-                String category = view.getCategory();
+                String category = view.getCategoryInput();
                 String expiration = view.getExpirationInput();
-                String image = view.getImageInput();
+                String image = view.getImageTextField().getText();
 
-                if (name.equals("") || price.equals("") || quantity.equals("") || stock.equals("")
-                        || category.equals("") || image.equals("")) {
+                if (name.equals("") || price.equals("") || quantity.equals("") || stock.equals("")) {
                     throw new Exception("Please complete the fields");
                 } else {
+                    if (image.equals(""))
+                        image = "noproduct.png";
                     int id = productBll.findProductLastId() + 1;
                     Product p = new Product(id, name, Float.parseFloat(price), Float.parseFloat(quantity),
                             Integer.parseInt(stock), category, expiration, image);
@@ -205,6 +240,49 @@ public class Controller {
                 view.showMessageError(exx.getMessage());
             }
 
+        }
+    }
+
+    class SelectBtnListener implements ActionListener {
+        public void actionPerformed(ActionEvent e) {
+            JFileChooser fileChooser = new JFileChooser();
+            if (fileChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION){
+                view.getImageTextField().setText(fileChooser.getSelectedFile().getName());
+            }
+        }
+    }
+
+    class DeleteClientBtnListener implements ActionListener {
+        public void actionPerformed(ActionEvent e) {
+            try {
+                int row = view.getClientTable().getSelectedRow();
+                if (row == -1)
+                    throw new Exception("No client selected!");
+                if (showConfirmDialog(view, "Are you sure you want to delete the client?") == 0){
+                    clientBll.deleteClient(clientBll.findClientById(Integer.parseInt("" +
+                            view.getClientTable().getValueAt(row, 0))));
+                    view.createAdminPanel(view.getContentPanel());
+                }
+            } catch (Exception ex){
+                view.showMessageError(ex.getMessage());
+            }
+        }
+    }
+
+    class DeleteProductBtnListener implements ActionListener {
+        public void actionPerformed(ActionEvent e) {
+            try {
+                int row = view.getProductTable().getSelectedRow();
+                if (row == -1)
+                    throw new Exception("No product selected!");
+                if (showConfirmDialog(view, "Are you sure you want to delete this product?") == 0){
+                    productBll.deleteProduct(productBll.findProductById(Integer.parseInt("" +
+                            view.getProductTable().getValueAt(row, 0))));
+                    view.createAdminPanel(view.getContentPanel());
+                }
+            } catch (Exception ex){
+                view.showMessageError(ex.getMessage());
+            }
         }
     }
 

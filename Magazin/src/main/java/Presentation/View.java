@@ -3,24 +3,27 @@ package Presentation;
 import BusinessLogic.ClientBLL;
 import BusinessLogic.ProductBLL;
 import Model.Client;
-import Model.Order;
 import Model.Product;
+import org.jdatepicker.impl.JDatePanelImpl;
+import org.jdatepicker.impl.JDatePickerImpl;
+import org.jdatepicker.impl.UtilDateModel;
 
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.text.DecimalFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 
 
 public class View extends JFrame{
     private static float totalCost = 0;
     private final JTextField searchTextField = new JTextField(25);
-    private JComboBox categories;
+    private JComboBox<String> categories;
+    private JComboBox<String> productsCategories;
     private final JPanel contentPanel;
     private final Font fo;
     private final Font fo2;
@@ -34,16 +37,15 @@ public class View extends JFrame{
     private final JDialog productInfo = new JDialog(this, "Info");
     private final JDialog billInfo = new JDialog(this, "Info");
 
-    private JButton loginButton;// = new JButton("LOGIN");
-    private  JButton signUpButton;// = new JButton("SIGN UP");
-    private JButton guestButton;
     private JLabel searchLabel;
     private JLabel contLabel;
     private JLabel sellLabel;
     private JLabel cartLabel;
     private JLabel logoLabel;
+    private JLabel adminLabel;
     private JTextField emailTextField;
     private JPasswordField passwordField;
+    private JButton loginButton;// = new JButton("LOGIN");
     private final JButton signButton = new JButton("SIGN UP");
     private final JPanel categoryPanel = new JPanel();
 
@@ -57,15 +59,20 @@ public class View extends JFrame{
     private final JTextField tPrice = new JTextField(25);
     private final JTextField tQuantity = new JTextField(25);
     private final JTextField tStock = new JTextField(25);
-    private final JTextField tCategory = new JTextField(25);
     private final JTextField tExpiration = new JTextField(25);
     private final JTextField tImage = new JTextField(25);
 
+    private JTable clientTable;
+    private JTable productTable;
+    private final JButton selectBtn = new JButton("...");
+    private final JButton deleteClientBtn = new JButton("   Delete client   ");
+    private final JButton deleteProductBtn = new JButton("   Delete product   ");
 
     private final ProductBLL productBll = new ProductBLL();
-    private final ClientBLL clientBLL = new ClientBLL();
+    private final ClientBLL clientBll = new ClientBLL();
     private final HashMap<Integer, Integer> cartList = new HashMap<Integer, Integer>();
 
+    private final String[] categoryList = { "Produse", "Fructe", "Legume", "Lactate", "Mezeluri", "Dulciuri", "Bauturi" };
 
     public View() {
         fo = new Font(searchTextField.getFont().toString(), Font.BOLD, 16);
@@ -75,8 +82,8 @@ public class View extends JFrame{
         contentPanel.setPreferredSize(new Dimension(1525, 730));
         contentPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
 
-        createProductsPanel(contentPanel, productBll.findAllProducts());
-//        createSellPanel(contentPanel);
+//        createProductsPanel(contentPanel, productBll.findAllProducts());
+        createSellPanel(contentPanel);
 
         JPanel mainPanel = new JPanel();
         mainPanel.setPreferredSize(new Dimension(1550, 830));
@@ -112,8 +119,19 @@ public class View extends JFrame{
         contLabel = new JLabel("Contul meu", icon4, SwingConstants.RIGHT);
         contLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        ImageIcon icon5 = new ImageIcon(new ImageIcon(Objects.requireNonNull(View.class.getResource("..\\search.png"))).getImage().getScaledInstance(20, 20,  java.awt.Image.SCALE_SMOOTH));
-        searchLabel = new JLabel(icon5);
+        ImageIcon icon5 = new ImageIcon(new ImageIcon(Objects.requireNonNull(View.class.getResource("..\\admin.png"))).getImage().getScaledInstance(25, 25,  java.awt.Image.SCALE_SMOOTH));
+        adminLabel = new JLabel("Admin", icon5, SwingConstants.RIGHT);
+        adminLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        adminLabel.setFont(new Font(contLabel.getFont().toString(), Font.BOLD, 13));
+        JPanel auxAdminPanel = new JPanel();
+        auxAdminPanel.add(adminLabel);
+        auxAdminPanel.setBackground(Color.white);
+        auxAdminPanel.setPreferredSize(new Dimension(70, 25));
+        auxAdminPanel.setLayout(new BoxLayout(auxAdminPanel, BoxLayout.Y_AXIS));
+        adminLabel.setVisible(false);
+
+        ImageIcon icon6 = new ImageIcon(new ImageIcon(Objects.requireNonNull(View.class.getResource("..\\search.png"))).getImage().getScaledInstance(20, 20,  java.awt.Image.SCALE_SMOOTH));
+        searchLabel = new JLabel(icon6);
         searchLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         searchTextField.setFont(fo);
@@ -124,7 +142,9 @@ public class View extends JFrame{
         meniu.add(Box.createHorizontalStrut(20));
         meniu.add(searchTextField);
         meniu.add(searchLabel);
-        meniu.add(Box.createHorizontalStrut(300));
+        meniu.add(Box.createHorizontalStrut(195));
+        meniu.add(auxAdminPanel);
+        meniu.add(Box.createHorizontalStrut(20));
         meniu.add(contLabel);
         meniu.add(Box.createHorizontalStrut(20));
         meniu.add(sellLabel);
@@ -172,8 +192,7 @@ public class View extends JFrame{
     }
 
     public void createCategoryPanel(JPanel contentPanel){
-        String[] s1 = { "Produse", "Fructe", "Legume", "Lactate", "Mezeluri", "Dulciuri", "Bauturi" };
-        categories = new JComboBox(s1);
+        categories = new JComboBox<>(categoryList);
         categories.setBackground(Color.white);
         categories.setSize(new Dimension(200, 40));
 
@@ -205,8 +224,12 @@ public class View extends JFrame{
             productPanel.setPreferredSize(new Dimension(205, 330));
             productPanel.setLayout(new BoxLayout(productPanel, BoxLayout.Y_AXIS));
             productPanel.setBackground(Color.white);
-
-            ImageIcon icon5 = new ImageIcon(new ImageIcon(Objects.requireNonNull(View.class.getResource("..\\" + p.getImage()))).getImage().getScaledInstance(205, 200,  java.awt.Image.SCALE_SMOOTH));
+            ImageIcon icon5;
+            try{
+                icon5 = new ImageIcon(new ImageIcon(Objects.requireNonNull(View.class.getResource("..\\" + p.getImage()))).getImage().getScaledInstance(205, 200,  java.awt.Image.SCALE_SMOOTH));
+            }catch (NullPointerException nll){
+                icon5 = new ImageIcon(new ImageIcon(Objects.requireNonNull(View.class.getResource("..\\noproduct.png"))).getImage().getScaledInstance(205, 200,  java.awt.Image.SCALE_SMOOTH));
+            }
             JLabel picLabel = new JLabel(icon5);
             picLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             picLabel.addMouseListener(new MouseAdapter() {
@@ -260,8 +283,9 @@ public class View extends JFrame{
     private void showPopUpDialog(){
         JPanel panel = new JPanel(new GridLayout(0, 1));
         loginButton = new JButton("LOG IN");
-        signUpButton = new JButton("SIGN UP");
-        guestButton = new JButton("CONTINUE AS GUEST");
+        // = new JButton("SIGN UP");
+        JButton signUpButton = new JButton("SIGN UP");
+        JButton guestButton = new JButton("CONTINUE AS GUEST");
 
         JButton loginBtn = new JButton("LOGIN");
 //        loginBtn.setBorder(BorderFactory.createLineBorder(Color.black));
@@ -310,7 +334,6 @@ public class View extends JFrame{
 
     }
 
-
     public void showBillInfo(Client c){
         ImageIcon icon = new ImageIcon(new ImageIcon(Objects.requireNonNull(View.class.getResource("..\\bill.png"))).getImage().getScaledInstance(205, 200,  java.awt.Image.SCALE_SMOOTH));
         JLabel picLabel = new JLabel(icon);
@@ -325,6 +348,7 @@ public class View extends JFrame{
 
         JPanel leftPanel = new JPanel();
         leftPanel.setBackground(Color.white);
+        leftPanel.add(Box.createVerticalStrut(40));
         leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
         for (JLabel l: labelList){
             l.setFont(fo);
@@ -344,6 +368,7 @@ public class View extends JFrame{
 
         JPanel rightPanel = new JPanel();
         rightPanel.setBackground(Color.white);
+        rightPanel.add(Box.createVerticalStrut(40));
         rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
         for (JLabel l: labelList){
             l.setFont(fo);
@@ -367,12 +392,6 @@ public class View extends JFrame{
         billInfo.setLocationRelativeTo(this);
         billInfo.setVisible(true);
     }
-
-
-
-
-
-
 
     private void showProductInfo(Product p){
         ImageIcon icon = new ImageIcon(new ImageIcon(Objects.requireNonNull(View.class.getResource("..\\" + p.getImage()))).getImage().getScaledInstance(205, 200,  java.awt.Image.SCALE_SMOOTH));
@@ -511,7 +530,6 @@ public class View extends JFrame{
         JLabel firstNameLabel = new JLabel("PRENUME:");
         JLabel lastNameLabel = new JLabel("NUME:");
 
-
         JPanel panel1 = new JPanel();
         panel1.setLayout(new BoxLayout(panel1, BoxLayout.Y_AXIS));
         panel1.add(lastNameLabel);
@@ -576,11 +594,11 @@ public class View extends JFrame{
         }
 
         labelList.clear();
-        labelList.add(new JLabel(c.getFirstName()));
-        labelList.add(new JLabel(c.getLastName()));
-        labelList.add(new JLabel(c.getPhone()));
-        labelList.add(new JLabel(c.getEmail()));
-        labelList.add(new JLabel(c.getAddress()));
+        labelList.add(new JLabel(c.getFirstName() != null ? c.getFirstName() : " "));
+        labelList.add(new JLabel(c.getLastName() != null ? c.getLastName() : " "));
+        labelList.add(new JLabel(c.getPhone() != null ? c.getPhone() : " "));
+        labelList.add(new JLabel(c.getEmail() != null ? c.getEmail() : " "));
+        labelList.add(new JLabel(c.getAddress() != null ? c.getAddress() : " "));
 
         JPanel rightPanel = new JPanel();
         rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
@@ -854,26 +872,55 @@ public class View extends JFrame{
         label5.add(stock);
         label5.add(tStock);
 
+        productsCategories = new JComboBox<>(categoryList);
+        productsCategories.setBackground(Color.white);
+        productsCategories.setSize(new Dimension(200, 40));
+
         JPanel label6 = new JPanel();
         label6.setLayout(new GridLayout(2, 4, 3, 3));
         label6.add(category);
-        label6.add(tCategory);
+        label6.add(productsCategories);
+
+        Properties prop = new Properties();
+        prop.put("text.today", "Today");
+        prop.put("text.month", "Month");
+        prop.put("text.year", "Year");
+        JDatePickerImpl datePicker = new JDatePickerImpl(new JDatePanelImpl(new UtilDateModel(), prop),
+                new JFormattedTextField.AbstractFormatter() {
+            @Override
+            public Object stringToValue(String text) throws ParseException {
+                return "";
+            }
+
+            @Override
+            public String valueToString(Object value) throws ParseException {
+                if (value != null)
+                    return new SimpleDateFormat("dd-MM-yyyy").format(((Calendar) value).getTime());
+                return "";
+            }
+        });
 
         JPanel label7 = new JPanel();
         label7.setLayout(new GridLayout(2, 4, 3, 3));
         label7.add(expiration);
-        label7.add(tExpiration);
+        label7.add(datePicker);
 
+        selectBtn.setPreferredSize(new Dimension(27, 20));
+        JPanel auxLabel8 = new JPanel();
+        auxLabel8.add(tImage);
+        auxLabel8.add(selectBtn);
+        auxLabel8.setLayout(new BoxLayout(auxLabel8, BoxLayout.X_AXIS));
         JPanel label8 = new JPanel();
         label8.setLayout(new GridLayout(2, 4, 3, 3));
         label8.add(image);
-        label8.add(tImage);
+        label8.add(auxLabel8);
 
         sellBtn.setBackground(new Color(0x3c7eda));
         sellBtn.setForeground(Color.white);
         sellBtn.setFont(fo);
         JPanel btnPanel = new JPanel();
         btnPanel.add(sellBtn);
+
 
         JPanel verticalPanel = new JPanel();
         verticalPanel.setLayout(new BoxLayout(verticalPanel, BoxLayout.Y_AXIS));
@@ -891,6 +938,101 @@ public class View extends JFrame{
         contentPanel.setVisible(false);
         contentPanel.removeAll();
         contentPanel.add(verticalPanel);
+        contentPanel.setVisible(true);
+    }
+
+    public void createAdminPanel(JPanel contentPanel){
+        clientTable = new JTable();
+        clientTable.setFont(fo);
+        clientTable.setRowHeight(20);
+        clientTable.setBackground(Color.white);
+        clientTable.setRowSelectionAllowed(true);
+        clientTable.setModel(clientBll.getTableData());
+        clientTable.setPreferredSize(new Dimension(550, 300));
+        clientTable.getColumnModel().getColumn(0).setPreferredWidth(30);
+        clientTable.getColumnModel().getColumn(1).setPreferredWidth(80);
+        clientTable.getColumnModel().getColumn(2).setPreferredWidth(80);
+        clientTable.getColumnModel().getColumn(3).setPreferredWidth(60);
+        clientTable.getColumnModel().getColumn(4).setPreferredWidth(100);
+        clientTable.getColumnModel().getColumn(5).setPreferredWidth(100);
+        clientTable.getColumnModel().getColumn(6).setPreferredWidth(100);
+
+        productTable = new JTable();
+        productTable.setFont(fo);
+        productTable.setRowHeight(20);
+        productTable.setBackground(Color.white);
+        productTable.setRowSelectionAllowed(true);
+        productTable.setModel(productBll.getTableData());
+        productTable.setPreferredSize(new Dimension(550, 300));
+        productTable.getColumnModel().getColumn(0).setPreferredWidth(30);
+        productTable.getColumnModel().getColumn(1).setPreferredWidth(100);
+        productTable.getColumnModel().getColumn(2).setPreferredWidth(60);
+        productTable.getColumnModel().getColumn(3).setPreferredWidth(50);
+        productTable.getColumnModel().getColumn(4).setPreferredWidth(50);
+        productTable.getColumnModel().getColumn(5).setPreferredWidth(80);
+        productTable.getColumnModel().getColumn(6).setPreferredWidth(100);
+        productTable.getColumnModel().getColumn(7).setPreferredWidth(80);
+
+        JScrollPane clientScrollPane = new JScrollPane(clientTable);
+        clientScrollPane.setBackground(Color.white);
+        clientScrollPane.setPreferredSize(new Dimension(550, 200));
+        clientScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+
+        JScrollPane productScrollPane = new JScrollPane(productTable);
+        productScrollPane.setBackground(Color.white);
+        productScrollPane.setPreferredSize(new Dimension(550, 200));
+        productScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+
+        deleteClientBtn.setBackground(new Color(0x3c7eda));
+        deleteClientBtn.setForeground(Color.white);
+        deleteClientBtn.setFont(fo);
+
+        deleteProductBtn.setBackground(new Color(0x3c7eda));
+        deleteProductBtn.setForeground(Color.white);
+        deleteProductBtn.setFont(fo);
+
+        Font titleFont = new Font(deleteProductBtn.getFont().toString(), Font.BOLD, 24);
+        JLabel clientLabel = new JLabel("CLIENTS");
+        clientLabel.setFont(titleFont);
+        JLabel productLabel = new JLabel("PRODUCTS");
+        productLabel.setFont(titleFont);
+
+        JPanel clientTitle = new JPanel();
+        clientTitle.add(clientLabel);
+        clientTitle.setPreferredSize(new Dimension(550, 40));
+        clientTitle.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
+
+        JPanel productTitle = new JPanel();
+        productTitle.add(productLabel);
+        productTitle.setPreferredSize(new Dimension(550, 40));
+        productTitle.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
+
+        JPanel clientPanel = new JPanel();
+        clientPanel.add(Box.createVerticalStrut(100));
+        clientPanel.add(clientTitle);
+        clientPanel.add(clientScrollPane);
+        clientPanel.add(Box.createVerticalStrut(200));
+        clientPanel.add(deleteClientBtn);
+        clientPanel.setPreferredSize(new Dimension(550, 650));
+
+        JPanel productPanel = new JPanel();
+        productPanel.add(Box.createVerticalStrut(100));
+        productPanel.add(productTitle);
+        productPanel.add(productScrollPane);
+        productPanel.add(Box.createVerticalStrut(200));
+        productPanel.add(deleteProductBtn);
+        productPanel.setPreferredSize(new Dimension(550, 650));
+
+        JPanel adminPanel = new JPanel();
+        adminPanel.add(clientPanel);
+        adminPanel.add(Box.createHorizontalStrut(100));
+        adminPanel.add(productPanel);
+        adminPanel.setPreferredSize(new Dimension( 1200, 450));
+        adminPanel.setLayout(new BoxLayout(adminPanel, BoxLayout.X_AXIS));
+
+        contentPanel.setVisible(false);
+        contentPanel.removeAll();
+        contentPanel.add(adminPanel);
         contentPanel.setVisible(true);
     }
 
@@ -930,11 +1072,15 @@ public class View extends JFrame{
     public String getPriceInput(){return this.tPrice.getText();}
     public String getQuantityInput(){return this.tQuantity.getText();}
     public String getStockInput(){return this.tStock.getText();}
-    public String getCategoryInput(){return this.tCategory.getText();}
+    public String getCategoryInput(){return this.productsCategories.getSelectedItem() + "";}
     public String getExpirationInput(){return this.tExpiration.getText();}
-    public String getImageInput(){return this.tImage.getText();}
+    public JTextField getImageTextField(){return this.tImage;}
+
+    public JTable getClientTable(){return clientTable;}
+    public JTable getProductTable(){return productTable;}
 
     public void addLogoBtnListener(MouseAdapter l){logoLabel.addMouseListener(l);}
+    public void addAdminBtnListener(MouseAdapter l){adminLabel.addMouseListener(l);}
     public void addAccBtnListener(MouseAdapter l){contLabel.addMouseListener(l);}
     public void addCartBtnListener(MouseAdapter l){cartLabel.addMouseListener(l);}
     public void addCategoryListener(ActionListener l){categories.addActionListener(l);}
@@ -946,13 +1092,15 @@ public class View extends JFrame{
     public void addSellLabelListener(MouseAdapter l){sellLabel.addMouseListener(l);}
     public void addSellBtnListener(ActionListener l){sellBtn.addActionListener(l);}
     public void addBuyBtnListener(ActionListener l){buyBtn.addActionListener(l);}
+    public void addSelectBtnListener(ActionListener l){selectBtn.addActionListener(l);}
+    public void addDeleteClientListener(ActionListener l){deleteClientBtn.addActionListener(l);}
+    public void addDeleteProductListener(ActionListener l){deleteProductBtn.addActionListener(l);}
 
+    public void setAdminLabelVisible(boolean bool){adminLabel.setVisible(bool);}
     public JDialog getDialog() {
         return dialog;
     }
-    public void setDialog(JDialog dialog) {
-        this.dialog = dialog;
-    }
     public void showMessageError(String ms){JOptionPane.showMessageDialog(this, ms);}
+    public HashMap<Integer, Integer> getCartList(){return cartList;}
 
 }

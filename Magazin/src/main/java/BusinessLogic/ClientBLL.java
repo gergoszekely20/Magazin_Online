@@ -39,7 +39,9 @@ public class ClientBLL {
     }
 
     public DefaultTableModel getTableData(){
-        DefaultTableModel data = clientDAO.getTableData(findAllClients());
+        List<Client> clientList = findAllClients();
+        clientList.remove(0);
+        DefaultTableModel data = clientDAO.getTableData(clientList);
         if (data == null) {
             throw new NoSuchElementException("The clients was not found!");
         }

@@ -6,7 +6,7 @@ import Model.Product;
 import java.util.regex.Pattern;
 
 public class PriceValidator implements Validator<Product> {
-    private static final String PRICE_PATTERN = "\\d+[.]?\\d*";
+    private static final String PRICE_PATTERN = "\\d+(\\.(\\d+))?";
 
     @Override
     public void validate(Product p) throws Exception {

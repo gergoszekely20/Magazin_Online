@@ -5,7 +5,7 @@ import Model.Client;
 import java.util.regex.Pattern;
 
 public class EmailValidator implements Validator<Client>{
-    private static final String EMAIL_PATTERN = "[a-z]+[0-9a-z]+@[a-z]+\\.[a-z]+";
+    private static final String EMAIL_PATTERN = "[a-z]+[0-9\\.\\-a-z]+@[a-z]+\\.[a-z]+";
 
     @Override
     public void validate(Client c) throws Exception {

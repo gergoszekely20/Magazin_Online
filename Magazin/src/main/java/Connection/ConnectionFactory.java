@@ -15,7 +15,7 @@ public class ConnectionFactory {
     private static final String DRIVER = "com.mysql.cj.jdbc.Driver";
     private static final String DBURL = "jdbc:mysql://localhost:3306/schooldb";
     private static final String USER = "root";
-    private static final String PASS = "Gergo2002@";
+    private static final String PASS = "root";
     private static final ConnectionFactory singleInstance = new ConnectionFactory();
 
     private ConnectionFactory(){
